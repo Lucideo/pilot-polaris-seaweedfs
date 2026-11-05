@@ -1,0 +1,129 @@
+name: polaris-seaweed
+
+x-seaweed: &seaweed
+  image: chrislusf/seaweedfs:${SEAWEEDFS_TAG:-latest}
+  restart: unless-stopped
+  networks: [polaris-seaweed-pilot]
+
+services:
+  #seaweed
+  master:
+    <<: *seaweed
+    container_name: sw-master
+    command: >
+      master -ip=master -ip.bind=0.0.0.0 -port=9333 -mdir=/data
+      -volumeSizeLimitMB=256 -defaultReplication=000
+    ports: ["9333:9333"]
+    volumes: [master-data:/data]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9333/cluster/status"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  volume:
+    <<: *seaweed
+    container_name: sw-volume
+    command: >
+      volume -mserver=master:9333 -ip=volume -ip.bind=0.0.0.0 -port=8080
+      -publicUrl=localhost:8080 -dir=/data -max=0
+      -dataCenter=dc1 -rack=rack1
+    ports: ["8080:8080"]
+    volumes: [volume-data:/data]
+    depends_on:
+      master: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/status"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  filer:
+    <<: *seaweed
+    container_name: sw-filer
+    command: >
+      filer -master=master:9333 -ip=filer -ip.bind=0.0.0.0 -port=8888
+      -defaultStoreDir=/data
+    ports: ["8888:8888"]
+    volumes: [filer-data:/data]
+    depends_on:
+      volume: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8888/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  s3:
+    <<: *seaweed
+    container_name: sw-s3
+    command: >
+      s3 -filer=filer:8888 -ip.bind=0.0.0.0 -port=8333
+      -config=/etc/seaweedfs/s3.json
+    ports: ["8333:8333"]
+    volumes: ["./s3.json:/etc/seaweedfs/s3.json:ro"]
+    depends_on:
+      filer: { condition: service_healthy }
+
+  polaris-db:
+    image: postgres:17
+    container_name: polaris-db
+    networks: [polaris-seaweed-pilot]
+    environment:
+      POSTGRES_DB: polaris
+      POSTGRES_USER: ${POLARIS_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POLARIS_POSTGRES_PASSWORD}
+    volumes:
+      - polaris-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U polaris -d polaris"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  polaris-bootstrap:
+    image: apache/polaris-admin-tool:${POLARIS_TAG:-1.7.0}
+    networks: [polaris-seaweed-pilot]
+    profiles: [bootstrap]
+    depends_on:
+      polaris-db: { condition: service_healthy }
+    environment:
+      POLARIS_PERSISTENCE_TYPE: relational-jdbc
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://polaris-db:5432/polaris
+      QUARKUS_DATASOURCE_USERNAME: polaris
+      QUARKUS_DATASOURCE_PASSWORD: ${POLARIS_POSTGRES_PASSWORD}
+    command: ["bootstrap", "-r", "${POLARIS_REALM}", "-c", "${POLARIS_REALM},${POLARIS_ROOT},${POLARIS_ROOT_SECRET}"]
+
+  polaris:
+    image: apache/polaris:${POLARIS_TAG:-1.7.0}
+    container_name: polaris
+    networks: [polaris-seaweed-pilot]
+    depends_on: 
+      s3: { condition: service_started }
+      polaris-db: { condition: service_healthy }
+    ports:
+      - "8181:8181"
+      - "8182:8182"
+    environment:
+      # POLARIS_BOOTSTRAP_CREDENTIALS: POLARIS,root,s3cr3t
+      POLARIS_REALM_CONTEXT_REALMS: POLARIS
+      POLARIS_PERSISTENCE_TYPE: relational-jdbc
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://polaris-db:5432/polaris
+      QUARKUS_DATASOURCE_USERNAME: ${POLARIS_POSTGRES_USER}
+      QUARKUS_DATASOURCE_PASSWORD: ${POLARIS_POSTGRES_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${POLARIS_S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${POLARIS_S3_SECRET_KEY}
+      AWS_REGION: ${AWS_REGION}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8182/q/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+volumes:
+  master-data:
+  volume-data:
+  filer-data:
+  polaris-pg-data:
+
+networks:
+  polaris-seaweed-pilot:
+    name: polaris-seaweed-pilot

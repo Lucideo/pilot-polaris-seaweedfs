@@ -1,0 +1,36 @@
+{
+  "identities": [
+    {
+      "name": "lab_admin",
+      "credentials": [
+        { "accessKey": "lab-admin", "secretKey": "lab-admin-secret-change-me" }
+      ],
+      "actions": ["Admin", "Read", "List", "Tagging", "Write"]
+    },
+    {
+      "name": "lab_reader",
+      "credentials": [
+        { "accessKey": "lab-reader", "secretKey": "lab-reader-secret-change-me" }
+      ],
+      "actions": ["Read:lakehouse", "List:lakehouse"]
+    },
+    {
+      "name": "polaris",
+      "credentials": [
+        { "accessKey": "polaris_access", "secretKey": "polaris_secret_change_me" }
+      ],
+      "actions": [
+        "Read:lakehouse", "Write:lakehouse", "List:lakehouse", "Tagging:lakehouse"
+      ]
+    },
+    {
+      "name": "duckdb",
+      "credentials": [
+        { "accessKey": "duckdb_access", "secretKey": "duckdb_secret_change_me" }
+      ],
+      "actions": [
+        "Read:lakehouse", "Write:lakehouse", "List:lakehouse", "Tagging:lakehouse"
+      ]
+    }
+  ]
+}

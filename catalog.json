@@ -1,0 +1,19 @@
+{
+	"catalog": {
+		"name": "usgs",
+		"type": "INTERNAL",
+		"properties": {
+			"default-base-location": "s3://lakehouse/usgs",
+			"polaris.config.drop-with-purge.enabled": "true"
+		},
+		"storageConfigInfo": {
+			"storageType": "S3",
+			"allowedLocations": ["s3://lakehouse/usgs"],
+			"region": "us-east-1",
+			"endpoint": "http://localhost:8333",
+			"endpointInternal": "http://s3:8333",
+			"pathStyleAccess": true,
+			"stsUnavailable": true
+		}
+	}
+}

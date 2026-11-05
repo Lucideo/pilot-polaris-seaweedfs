@@ -1,0 +1,19 @@
+# Secrets / local config
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Local data (downloaded / generated)
+data/
+*.duckdb
+*.duckdb.wal
+
+# OS / editor
+.DS_Store
+.vscode/
