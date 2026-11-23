@@ -8,7 +8,7 @@ A small, local-only pilot I built to learn **[Apache Polaris](https://polaris.ap
 
 The dataset is the [USGS earthquake feed](https://earthquake.usgs.gov/earthquakes/feed/v1.0/csv.php) for the past week. It moves through a simple bronze → silver flow.
 
-> This is a learning project. Credentials in `s3.json` and `.env` are placeholders, and none of the setup is hardened for production.
+> This is a learning project. Credentials in `s3.json` and `.env.example` are placeholders, and none of the setup is hardened for production.
 
 ## Architecture
 
@@ -58,7 +58,8 @@ All services share the Docker network `polaris-seaweed-pilot`.
 ├── catalog.json             # Polaris catalog definition ("usgs" → s3://lakehouse/usgs)
 ├── Makefile                 # Every step of the pilot as a make target
 ├── requirements.txt         # Python deps (duckdb)
-├── .env                     # Local config and secrets (not committed)
+├── .env.example             # Template for .env, with every variable (committed)
+├── .env                     # Local config and secrets, copied from .env.example (not committed)
 └── scripts/
     ├── bronze_ingestion.py  # USGS CSV → s3://lakehouse/bronze/raw_data.parquet
     ├── silver_load.py       # bronze parquet → Iceberg table usgs.silver.earthquakes
@@ -74,9 +75,13 @@ All services share the Docker network `polaris-seaweed-pilot`.
 
 ## Configuration
 
-The Makefile and the Python scripts read their settings from `.env`. Create it with these variables. The values shown are examples; the S3 keys must match the identities in `s3.json`.
+The Makefile, `compose.yml` and the Python scripts read their settings from `.env`. Create it from the template:
 
-> The Makefile currently requests its admin token with the literal credentials `root` / `s3cr3t`. Keep `POLARIS_ROOT` and `POLARIS_ROOT_SECRET` set to those values, or change the `TOKEN` line in the Makefile.
+```bash
+cp .env.example .env
+```
+
+The values in the template work as-is for a local run. The S3 keys must match the identities in `s3.json`.
 
 ## Running the pilot
 
