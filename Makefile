@@ -6,7 +6,7 @@ LS_PATH ?= lakehouse
 
 TOKEN := $(shell curl -s $(POLARIS_ENDPOINT_URL_HOST)/api/catalog/v1/oauth/tokens \
   -H "Polaris-Realm: $(POLARIS_REALM)" \
-  -d grant_type=client_credentials -d client_id=root -d client_secret=s3cr3t \
+  -d grant_type=client_credentials -d client_id=$(POLARIS_ROOT) -d client_secret=$(POLARIS_ROOT_SECRET) \
   -d scope=PRINCIPAL_ROLE:ALL | jq -r .access_token)
 
 AWS_CLI_ADMIN := docker run --rm --network polaris-seaweed-pilot \
@@ -86,11 +86,11 @@ p_set_dbt_credentials:
 # p_assign_catalog_privilege:
 	@curl -s -X PUT $(POLARIS_ENDPOINT_URL_HOST)/api/management/v1/catalogs/$(POLARIS_CATALOG)/catalog-roles/$(POLARIS_CATALOG_ROLE)/grants \
 	-H "Authorization: Bearer $(TOKEN)" -H "Polaris-Realm: $(POLARIS_REALM)" \
-	-H "Content-Type: application/json" -d '{"grant": {"type": "catalog", "privilege": "CATALOG_MANAGE_CONTENT"}}"'
+	-H "Content-Type: application/json" -d '{"grant": {"type": "catalog", "privilege": "CATALOG_MANAGE_CONTENT"}}'
 # p_attach_catalog_role_to_principal_role:
 	@curl -s -X PUT $(POLARIS_ENDPOINT_URL_HOST)/api/management/v1/principal-roles/$(POLARIS_PRINCIPAL_ROLE)/catalog-roles/$(POLARIS_CATALOG) \
 	-H "Authorization: Bearer $(TOKEN)" -H "Polaris-Realm: $(POLARIS_REALM)" \
-	-H "Content-Type: application/json" -d '{"catalogRole": {"name": "$(POLARIS_CATALOG_ROLE)"}}}'
+	-H "Content-Type: application/json" -d '{"catalogRole": {"name": "$(POLARIS_CATALOG_ROLE)"}}'
 
 p_list_credentials:
 # p_list_principals:
